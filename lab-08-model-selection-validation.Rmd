@@ -12,10 +12,10 @@ output:
     code_folding: hide
     df_print: paged
 editor_options:
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
-```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+```{r setup, echo=FALSE, message=FALSE, warning=T}
 library(tidyverse)
 library(lubridate)
 library(janitor)
@@ -63,19 +63,19 @@ By the end of this lab, you should be able to:
 
 ## Load and inspect
 
-```{r load_data, echo=TRUE, eval=FALSE}
+```{r load_data, echo=TRUE, eval=T}
 # GOAL: Read the dataset and keep 2023 observations.
 
 df <- read_csv("data/us-ams-simple.csv", na = c("-9999")) %>%
   clean_names() %>%
-  filter(year_local == ___)
+  filter(year_local == 2023)
 
 glimpse(df)
 ```
 
 ## Derive time columns if needed
 
-```{r derive_time, echo=TRUE, eval=FALSE}
+```{r derive_time, echo=TRUE, eval=T}
 # GOAL: Create date / month columns if they do not already exist.
 
 df <- df %>%
@@ -99,10 +99,10 @@ Possible examples:
 - response: `le`, `fc`, `gpp`
 - predictors: `ta`, `swc`, `vpd`, `rg`
 
-```{r choose_vars, echo=TRUE, eval=FALSE}
-response_var <- "___"
-pred1 <- "___"
-pred2 <- "___"
+```{r choose_vars, echo=TRUE, eval=T}
+response_var <- "le"
+pred1 <- "ta"
+pred2 <- "swc"
 
 # CHECK: do these variables exist?
 c(response_var, pred1, pred2) %in% names(df)
@@ -116,11 +116,11 @@ c(response_var, pred1, pred2) %in% names(df)
 
 Keep only rows with non-missing values for your chosen variables.
 
-```{r make_analysis_df, echo=TRUE, eval=FALSE}
+```{r make_analysis_df, echo=TRUE, eval=T}
 # GOAL: Create an analysis data frame using only complete cases.
 
 df_mod <- df %>%
-  select(___, ___, ___) %>%
+  select(response_var, pred1, pred2) %>%
   drop_na()
 
 glimpse(df_mod)
@@ -135,17 +135,17 @@ Fit:
 - **Model 2:** response ~ pred2
 - **Model 3:** response ~ pred1 + pred2
 
-```{r fit_models, echo=TRUE, eval=FALSE}
-m1 <- lm(___ ~ ___, data = df_mod)
-m2 <- lm(___ ~ ___, data = df_mod)
-m3 <- lm(___ ~ ___ + ___, data = df_mod)
+```{r fit_models, echo=TRUE, eval=T}
+m1 <- lm(df_mod[[response_var]] ~ df_mod[[pred1]], data = df_mod)
+m2 <- lm(df_mod[[response_var]] ~ df_mod[[pred2]], data = df_mod)
+m3 <- lm(df_mod[[response_var]] ~ df_mod[[pred1]] + df_mod[[pred2]], data = df_mod)
 ```
 
 ---
 
 ## 4) View coefficients with `tidy()`
 
-```{r tidy_models, echo=TRUE, eval=FALSE}
+```{r tidy_models, echo=TRUE, eval=T}
 tidy(m1)
 tidy(m2)
 tidy(m3)
@@ -159,7 +159,7 @@ tidy(m3)
 
 Make scatterplots with fitted linear trends for Model 1 and Model 2.
 
-```{r plot_m1, echo=TRUE, eval=FALSE}
+```{r plot_m1, echo=TRUE, eval=T}
 ggplot(df_mod, aes(x = .data[[pred1]], y = .data[[response_var]])) +
   geom_point(alpha = 0.2) +
   geom_smooth(method = "lm", se = FALSE) +
@@ -171,7 +171,7 @@ ggplot(df_mod, aes(x = .data[[pred1]], y = .data[[response_var]])) +
   )
 ```
 
-```{r plot_m2, echo=TRUE, eval=FALSE}
+```{r plot_m2, echo=TRUE, eval=T}
 ggplot(df_mod, aes(x = .data[[pred2]], y = .data[[response_var]])) +
   geom_point(alpha = 0.2) +
   geom_smooth(method = "lm", se = FALSE) +
@@ -189,10 +189,10 @@ ggplot(df_mod, aes(x = .data[[pred2]], y = .data[[response_var]])) +
 
 ## 6) Get fitted values and residuals with `augment()`
 
-```{r augment_models, echo=TRUE, eval=FALSE}
-aug_m1 <- augment(m1, data = df_mod)
-aug_m2 <- augment(m2, data = df_mod)
-aug_m3 <- augment(m3, data = df_mod)
+```{r augment_models, echo=TRUE, eval=T}
+aug_m1 <- augment(m1)
+aug_m2 <- augment(m2)
+aug_m3 <- augment(m3)
 
 aug_m1 %>% select(.fitted, .resid) %>% head()
 ```
@@ -211,7 +211,7 @@ And:
 
 $SST = SSR + SSE$
 
-```{r ss_model1, echo=TRUE, eval=FALSE}
+```{r ss_model1, echo=TRUE, eval=T}
 y <- df_mod[[response_var]]
 ybar <- mean(y)
 
@@ -236,15 +236,15 @@ Use:
 
 $R^2 = 1 - SSE / SST$
 
-```{r r2_manual, echo=TRUE, eval=FALSE}
-r2_m1_manual <- ___
+```{r r2_manual, echo=TRUE, eval=T}
+r2_m1_manual <- 1 - sse_m1/sst
 
 r2_m1_manual
 ```
 
 ## 9) Compare to `glance()`
 
-```{r glance_model1, echo=TRUE, eval=FALSE}
+```{r glance_model1, echo=TRUE, eval=T}
 glance(m1)
 ```
 
@@ -259,9 +259,9 @@ Use:
 - $MSE = mean(e_i^2)$
 - $RMSE = sqrt(MSE)$
 
-```{r mse_rmse_m1, echo=TRUE, eval=FALSE}
-mse_m1 <- ___
-rmse_m1 <- ___
+```{r mse_rmse_m1, echo=TRUE, eval=T}
+mse_m1 <- mean(aug_m1$.resid^2)
+rmse_m1 <- sqrt(mse_m1)
 
 tibble(
   mse_m1 = mse_m1,
@@ -275,7 +275,7 @@ tibble(
 
 ## 11) Compare all three models using `glance()`
 
-```{r compare_glance, echo=TRUE, eval=FALSE}
+```{r compare_glance, echo=TRUE, eval=T}
 bind_rows(
   glance(m1) %>% mutate(model = "m1"),
   glance(m2) %>% mutate(model = "m2"),
@@ -290,15 +290,15 @@ bind_rows(
 
 ## 12) Compare all three models using RMSE
 
-```{r compare_rmse, echo=TRUE, eval=FALSE}
+```{r compare_rmse, echo=TRUE, eval=T}
 rmse_tbl <- bind_rows(
-  augment(m1, data = df_mod) %>%
+  augment(m1) %>%
     summarise(rmse = sqrt(mean(.resid^2))) %>%
     mutate(model = "m1"),
-  augment(m2, data = df_mod) %>%
+  augment(m2) %>%
     summarise(rmse = sqrt(mean(.resid^2))) %>%
     mutate(model = "m2"),
-  augment(m3, data = df_mod) %>%
+  augment(m3) %>%
     summarise(rmse = sqrt(mean(.resid^2))) %>%
     mutate(model = "m3")
 )
@@ -314,7 +314,7 @@ rmse_tbl
 
 Make residual vs fitted plots for at least two models.
 
-```{r resid_plot_m1, echo=TRUE, eval=FALSE}
+```{r resid_plot_m1, echo=TRUE, eval=T}
 ggplot(aug_m1, aes(x = .fitted, y = .resid)) +
   geom_point(alpha = 0.2) +
   geom_hline(yintercept = 0, linetype = "dashed") +
@@ -326,7 +326,7 @@ ggplot(aug_m1, aes(x = .fitted, y = .resid)) +
   )
 ```
 
-```{r resid_plot_m3, echo=TRUE, eval=FALSE}
+```{r resid_plot_m3, echo=TRUE, eval=T}
 ggplot(aug_m3, aes(x = .fitted, y = .resid)) +
   geom_point(alpha = 0.2) +
   geom_hline(yintercept = 0, linetype = "dashed") +
