@@ -1,5 +1,5 @@
 ---
-title: "Lab 07 — Model Selection and Validation"
+title: "Lab 08 — Model Selection and Validation"
 author: "EAES 480 — Modern Statistics in Earth & Environmental Science"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
@@ -361,17 +361,241 @@ Fill in:
 
 ---
 
-# Part II — Placeholder: train-test validation
+# Part II — Train/Test Splits and Cross-Validation
 
-In the next lecture and lab section, we will extend model selection into **validation**.
+In this section you will extend model selection toward **prediction**.
 
-We will ask:
+You will:
 
-- Does a model that fits the training data well also predict new data well?
-- How do train-test splits change model comparison?
-- When can a more complex model overfit?
+- choose **two new predictors** (not `ta` or `swc`) to explain `le`
+- hold out a **test set**
+- use **4-fold cross-validation on training data**
+- choose between **two candidate models**
+- refit the chosen model on all training data
+- evaluate it once on the held-out test data
 
-> *Instructor will add this section later. Do not delete this header.*
+The key idea is:
+
+> Use training data to build models, validation folds to choose among them, and test data only once for final evaluation.
+
+---
+
+## 15) Choose two new predictors for `le`
+
+Choose **two predictors that are NOT `ta` or `swc`**.
+
+Possible examples depend on your file, but might include things like:
+- `vpd`
+- `rg`
+- `fc`
+- `gpp`
+- `h`
+- `rh`
+
+```{r choose_new_predictors, echo=TRUE, eval=FALSE}
+response_var <- "le"
+pred1 <- "___"
+pred2 <- "___"
+
+# CHECK: do these exist?
+c(response_var, pred1, pred2) %in% names(df)
+```
+
+> Why did you choose these two predictors?
+
+---
+
+## 16) Create a clean modeling dataset
+
+Keep only complete cases for the response and the two predictors.
+
+```{r make_prediction_df, echo=TRUE, eval=FALSE}
+df_pred <- df %>%
+  select(___, ___, ___) %>%
+  drop_na()
+
+glimpse(df_pred)
+```
+
+> How many observations remain after removing missing values?
+
+---
+
+## 17) Shuffle rows and create a train/test split
+
+Use 20% of the data as a final **test set**.
+
+```{r split_train_test, echo=TRUE, eval=FALSE}
+set.seed(___)
+
+df_shuf <- df_pred %>%
+  slice_sample(prop = 1)
+
+n_total <- nrow(df_shuf)
+n_test <- round(0.20 * n_total)
+
+test_data <- df_shuf %>% slice(1:n_test)
+train_data <- df_shuf %>% slice((n_test + 1):n_total)
+
+tibble(
+  dataset = c("train", "test"),
+  n = c(nrow(train_data), nrow(test_data))
+)
+```
+
+> Why do we keep the test set separate from model selection?
+
+---
+
+## 18) Define two candidate models
+
+Use:
+
+- **Model 1:** `le ~ pred1`
+- **Model 2:** `le ~ pred1 + pred2`
+
+Write them out in words below:
+
+> Model 1: `___`
+
+> Model 2: `___`
+
+---
+
+## 19) Create 4 folds on the training data
+
+```{r make_cv_folds, echo=TRUE, eval=FALSE}
+set.seed(___)
+
+train_folds <- train_data %>%
+  mutate(fold = rep(1:4, length.out = n()))
+
+train_folds %>% count(fold)
+```
+
+> Why do we create folds only on the training data, and not using the test data?
+
+---
+
+## 20) Run 4-fold cross-validation
+
+For each fold:
+
+- train on 3 folds
+- validate on 1 held-out fold
+- compute RMSE
+
+```{r cv_loop, echo=TRUE, eval=FALSE}
+cv_results <- map_dfr(1:4, function(k) {
+
+  cv_train <- train_folds %>% filter(fold != k)
+  cv_valid <- train_folds %>% filter(fold == k)
+
+  m1 <- lm(___ ~ ___, data = cv_train)
+  m2 <- lm(___ ~ ___ + ___, data = cv_train)
+
+  tibble(
+    fold = k,
+    model = c("m1", "m2"),
+    rmse = c(
+      sqrt(mean((cv_valid[[response_var]] - predict(m1, newdata = cv_valid))^2)),
+      sqrt(mean((cv_valid[[response_var]] - predict(m2, newdata = cv_valid))^2))
+    )
+  )
+})
+
+cv_results
+```
+
+---
+
+## 21) Summarize cross-validation performance
+
+Compute the mean and SD of RMSE across folds.
+
+```{r cv_summary, echo=TRUE, eval=FALSE}
+cv_summary <- cv_results %>%
+  group_by(model) %>%
+  summarise(
+    mean_rmse = ___,
+    sd_rmse = ___,
+    .groups = "drop"
+  )
+
+cv_summary
+```
+
+> Which model has the lower average validation RMSE?  
+> What does the SD across folds tell you?
+
+---
+
+## 22) Visualize fold-by-fold validation RMSE
+
+```{r plot_cv_results, echo=TRUE, eval=FALSE}
+ggplot(cv_results, aes(x = factor(fold), y = rmse, color = model, group = model)) +
+  geom_point(size = 3) +
+  geom_line() +
+  theme_classic(base_size = 18) +
+  labs(
+    x = "Held-out validation fold",
+    y = "Validation RMSE",
+    title = "Cross-validation performance across folds"
+  )
+```
+
+> Does one model win consistently across folds, or only sometimes?
+
+---
+
+## 23) Choose your preferred model
+
+Fill in:
+
+> My selected model is: `___`
+
+> I chose it because: `___`
+
+---
+
+## 24) Refit the chosen model on all training data
+
+Use all of `train_data` now that you have selected the model.
+
+```{r refit_final_model, echo=TRUE, eval=FALSE}
+final_model <- lm(___, data = train_data)
+
+tidy(final_model)
+```
+
+---
+
+## 25) Evaluate the final model on the test set
+
+Use `predict()` and compute test RMSE.
+
+```{r test_evaluation, echo=TRUE, eval=FALSE}
+test_pred <- predict(final_model, newdata = test_data)
+
+test_rmse <- sqrt(mean((test_data[[response_var]] - test_pred)^2))
+
+test_rmse
+```
+
+> How does the test RMSE compare with the cross-validation RMSE?
+
+---
+
+## 26) Final interpretation
+
+Answer in **5–7 sentences**:
+
+- Why did you not use the test data during model selection?
+- How did cross-validation help you choose between models?
+- Did the chosen model generalize well to test data?
+- What would it mean if test RMSE were much worse than validation RMSE?
+
+> *Write your answer here.*
 
 ---
 
