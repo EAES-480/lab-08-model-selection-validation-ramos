@@ -66,7 +66,7 @@ By the end of this lab, you should be able to:
 ```{r load_data, echo=TRUE, eval=T}
 # GOAL: Read the dataset and keep 2023 observations.
 
-df <- read_csv("data/us-ams-simple.csv", na = c("-9999")) %>%
+df <- read_csv("data/us-ams-simple_V2.csv", na = c("-9999")) %>%
   clean_names() %>%
   filter(year_local == 2023)
 
@@ -102,13 +102,14 @@ Possible examples:
 ```{r choose_vars, echo=TRUE, eval=T}
 response_var <- "le"
 pred1 <- "ta"
-pred2 <- "swc"
+pred2 <- "rh"
 
 # CHECK: do these variables exist?
 c(response_var, pred1, pred2) %in% names(df)
 ```
 
 > Which variables did you choose, and why do you think they may be related?
+I chose latent heat turbulent flux (le), air temperature (ta) and relative humidity (rh). I think they may be related because le represents energy exchange and water vapor.
 
 ---
 
@@ -152,6 +153,7 @@ tidy(m3)
 ```
 
 > Which coefficients are positive? Which are negative? Do they make scientific sense?
+Model 1 is positive and Model 2 is negative. They made scientific sense because higher temperatures generally drive more evapotranspiration (more le), while higher humidity reduces the atmospheric demand for moisture (less le).
 
 ---
 
@@ -184,6 +186,7 @@ ggplot(df_mod, aes(x = .data[[pred2]], y = .data[[response_var]])) +
 ```
 
 > Visually, which model seems stronger? Why?
+Model 1 seems stronger than model 2 because is less fuzzy.
 
 ---
 
@@ -227,6 +230,7 @@ tibble(
 ```
 
 > In words, what do SST and SSE represent?
+SST is the variability related to "le" arround the predicted value. SSE is the variability (difference) of the observed and the predicted model.
 
 ---
 
@@ -249,6 +253,7 @@ glance(m1)
 ```
 
 > Does your manual R-squared match the value from `glance()`?
+Yes.
 
 ---
 
@@ -270,6 +275,7 @@ tibble(
 ```
 
 > What does RMSE mean in the units of your response variable?
+RMSE represents the vertical distance between the observed values and the regression line.
 
 ---
 
@@ -285,6 +291,7 @@ bind_rows(
 ```
 
 > Which model has the highest R-squared? Is that enough to call it the best model?
+Model 3 has the highest R^2. It is not enought to call it the best model because it just test for the fit and not for accuarcy.
 
 ---
 
@@ -307,6 +314,7 @@ rmse_tbl
 ```
 
 > Which model has the smallest RMSE? Does that agree with the R-squared ranking?
+Model 3, yes.
 
 ---
 
@@ -339,6 +347,7 @@ ggplot(aug_m3, aes(x = .fitted, y = .resid)) +
 ```
 
 > Do the residual plots suggest any problems (curvature, changing variance, outliers)? Which model looks more appropriate?
+The residual plots for Model 1 and Model 3 show variance at high fitted values.
 
 ---
 
@@ -348,16 +357,16 @@ Choose the model you think is best supported by the evidence.
 
 Fill in:
 
-> My preferred model is `___`
+> My preferred model is `Model 3`
 
 > I based this decision on:
-> - `___`
-> - `___`
-> - `___`
+> - `Highest R^2`
+> - `Lowest RMSE`
+> - `Visual fit seems better`
 
 **Prompt (5–7 sentences):** Explain why you chose this model. Use at least two quantitative criteria (such as R-squared, RMSE, or sigma) and one visual criterion (such as the residual plot or scatterplot). Also explain why a different model was less convincing.
 
-> *Write your answer here.*
+> *I chose Model 3 as the best model because it consistently outperformed the others models. Quantitatively, Model 3 achieved the highest R^2, meaning it explains approximately 40.4% of the variability in latent heat flux. It also yielded the lowest RMSE of 61.63, indicating more accurate predictions. Visually, while the residual plots for all models show a "fan" shape, Model 3's residuals are more densely concentrated near the horizontal, suggesting a better overall fit to the data. In comparison, Model 2 was significantly less convincing; it explained only about 8.3% of the variance and had a much higher RMSE of 76.48.*
 
 ---
 
@@ -392,16 +401,18 @@ Possible examples depend on your file, but might include things like:
 - `h`
 - `rh`
 
-```{r choose_new_predictors, echo=TRUE, eval=FALSE}
+```{r choose_new_predictors, echo=TRUE, eval=T}
 response_var <- "le"
-pred1 <- "___"
-pred2 <- "___"
+pred1 <- "fc"
+pred2 <- "rh"
 
 # CHECK: do these exist?
 c(response_var, pred1, pred2) %in% names(df)
 ```
 
 > Why did you choose these two predictors?
+I think they may be related because le represents energy exchange (could be related to CO2) and water vapor.
+
 
 ---
 
@@ -409,15 +420,16 @@ c(response_var, pred1, pred2) %in% names(df)
 
 Keep only complete cases for the response and the two predictors.
 
-```{r make_prediction_df, echo=TRUE, eval=FALSE}
+```{r make_prediction_df, echo=TRUE, eval=T}
 df_pred <- df %>%
-  select(___, ___, ___) %>%
+  select(response_var, pred1, pred2) %>%
   drop_na()
 
 glimpse(df_pred)
 ```
 
 > How many observations remain after removing missing values?
+15851
 
 ---
 
@@ -425,8 +437,8 @@ glimpse(df_pred)
 
 Use 20% of the data as a final **test set**.
 
-```{r split_train_test, echo=TRUE, eval=FALSE}
-set.seed(___)
+```{r split_train_test, echo=TRUE, eval=T}
+set.seed(12)
 
 df_shuf <- df_pred %>%
   slice_sample(prop = 1)
@@ -444,6 +456,7 @@ tibble(
 ```
 
 > Why do we keep the test set separate from model selection?
+We keep the test set separate to get an unbiased evaluation of the final model's performance on "unseen" data.
 
 ---
 
@@ -456,16 +469,16 @@ Use:
 
 Write them out in words below:
 
-> Model 1: `___`
+> Model 1: `Latent heat turbulent flux is modeled as a function of Carbon Dioxide (CO2) turbulent flux.`
 
-> Model 2: `___`
+> Model 2: `Latent heat turbulent flux is modeled as a function of both Carbon Dioxide (CO2) turbulent flux and Relative humidity.`
 
 ---
 
 ## 19) Create 4 folds on the training data
 
-```{r make_cv_folds, echo=TRUE, eval=FALSE}
-set.seed(___)
+```{r make_cv_folds, echo=TRUE, eval=T}
+set.seed(12)
 
 train_folds <- train_data %>%
   mutate(fold = rep(1:4, length.out = n()))
@@ -474,6 +487,7 @@ train_folds %>% count(fold)
 ```
 
 > Why do we create folds only on the training data, and not using the test data?
+To simulate the process of seeing "new" data while still preserving the final test set for final evaluation. This prevents data leakage.
 
 ---
 
@@ -485,14 +499,14 @@ For each fold:
 - validate on 1 held-out fold
 - compute RMSE
 
-```{r cv_loop, echo=TRUE, eval=FALSE}
+```{r cv_loop, echo=TRUE, eval=T}
 cv_results <- map_dfr(1:4, function(k) {
 
   cv_train <- train_folds %>% filter(fold != k)
   cv_valid <- train_folds %>% filter(fold == k)
 
-  m1 <- lm(___ ~ ___, data = cv_train)
-  m2 <- lm(___ ~ ___ + ___, data = cv_train)
+  m1 <- lm(cv_train[[response_var]] ~ cv_train[[pred1]], data = cv_train)
+  m2 <- lm(cv_train[[response_var]] ~ cv_train[[pred1]] + cv_train[[pred2]], data = cv_train)
 
   tibble(
     fold = k,
@@ -513,12 +527,12 @@ cv_results
 
 Compute the mean and SD of RMSE across folds.
 
-```{r cv_summary, echo=TRUE, eval=FALSE}
+```{r cv_summary, echo=TRUE, eval=T}
 cv_summary <- cv_results %>%
   group_by(model) %>%
   summarise(
-    mean_rmse = ___,
-    sd_rmse = ___,
+    mean_rmse = mean(rmse),
+    sd_rmse = sd(rmse),
     .groups = "drop"
   )
 
@@ -527,12 +541,14 @@ cv_summary
 
 > Which model has the lower average validation RMSE?  
 > What does the SD across folds tell you?
+Model 1 has a lower mean RMSE. SD tells us how much the model performance varies depending on which subset of data it is trained on.
+
 
 ---
 
 ## 22) Visualize fold-by-fold validation RMSE
 
-```{r plot_cv_results, echo=TRUE, eval=FALSE}
+```{r plot_cv_results, echo=TRUE, eval=T}
 ggplot(cv_results, aes(x = factor(fold), y = rmse, color = model, group = model)) +
   geom_point(size = 3) +
   geom_line() +
@@ -545,6 +561,7 @@ ggplot(cv_results, aes(x = factor(fold), y = rmse, color = model, group = model)
 ```
 
 > Does one model win consistently across folds, or only sometimes?
+Model 1 always wins.
 
 ---
 
@@ -552,9 +569,9 @@ ggplot(cv_results, aes(x = factor(fold), y = rmse, color = model, group = model)
 
 Fill in:
 
-> My selected model is: `___`
+> My selected model is: `Model 1`
 
-> I chose it because: `___`
+> I chose it because: `is consistent with a low mean RMSE and low SD RMSE`
 
 ---
 
@@ -562,8 +579,8 @@ Fill in:
 
 Use all of `train_data` now that you have selected the model.
 
-```{r refit_final_model, echo=TRUE, eval=FALSE}
-final_model <- lm(___, data = train_data)
+```{r refit_final_model, echo=TRUE, eval=T}
+final_model <- lm(train_data, data = train_data)
 
 tidy(final_model)
 ```
@@ -574,7 +591,7 @@ tidy(final_model)
 
 Use `predict()` and compute test RMSE.
 
-```{r test_evaluation, echo=TRUE, eval=FALSE}
+```{r test_evaluation, echo=TRUE, eval=T}
 test_pred <- predict(final_model, newdata = test_data)
 
 test_rmse <- sqrt(mean((test_data[[response_var]] - test_pred)^2))
@@ -583,6 +600,7 @@ test_rmse
 ```
 
 > How does the test RMSE compare with the cross-validation RMSE?
+The test RMSE is significantly lower than the average cross-validation RMSE. This suggests the model generalized very well to this specific test set.
 
 ---
 
@@ -595,7 +613,7 @@ Answer in **5–7 sentences**:
 - Did the chosen model generalize well to test data?
 - What would it mean if test RMSE were much worse than validation RMSE?
 
-> *Write your answer here.*
+> *The test data was intentionally held out during the model selection process to provide a completely unbiased final evaluation of the model's predictive performance on "unseen" data. By performing 4-fold cross-validation on the training set, I was able to compare the stability of the candidate models across different data subsets, ensuring the selection was based on consistent performance rather than luck. Although Model 1 showed a slightly lower average validation RMSE than Model 2, the final model refit on the training data included both fc and rh to account for their combined scientific influence. The chosen model generalized exceptionally well to the test data, as evidenced by a final test RMSE of 56.16, which was notably lower than the average error observed during the cross-validation phase. If the test RMSE had been significantly higher than the validation results instead, it would have indicated that the model was overfitting to the training data.*
 
 ---
 
